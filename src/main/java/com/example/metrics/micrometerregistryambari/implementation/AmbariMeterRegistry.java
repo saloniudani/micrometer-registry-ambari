@@ -74,7 +74,7 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
         for (Meter meter : getMeters()) {
             //log.info("Meter ID :-----"+meter.getId().toString());
             for (Measurement measurement : meter.measure()) {
-                String metricName = meter.getId().getName().toString()+"."+measurement.getStatistic().toString().toLowerCase().replace("_","");
+                String metricName = meter.getId().getName()+"."+measurement.getStatistic().toString().toLowerCase().replace("_","");
                 BigDecimal metricValue = BigDecimal.valueOf(measurement.getValue());
                 metricNames.add(metricName);
                 metricValues.add(metricValue);
