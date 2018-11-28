@@ -3,7 +3,6 @@ package com.example.metrics.micrometerregistryambari.implementation;
 import io.micrometer.core.instrument.step.StepRegistryConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;

@@ -1,6 +1,7 @@
 package com.example.metrics.micrometerregistryambari.controller;
 
 
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,15 @@ public class SampleController {
         counter = meterRegistry.counter("app.requests");
     }
 
+    @Timed(value = "app.requests.timer")
     @RequestMapping(value = {
             "/hit"}, method = RequestMethod.GET)
     public String getName() {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         counter.increment();
         return "You hit me "+counter.count()+" times from last reporting interval.";
     }

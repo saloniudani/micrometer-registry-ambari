@@ -74,8 +74,7 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
         for (Meter meter : getMeters()) {
             //log.info("Meter ID :-----"+meter.getId().toString());
             for (Measurement measurement : meter.measure()) {
-                String metricName = meter.getId().getName().toString()+"."+measurement.getStatistic().toString().toLowerCase();
-                //TODO: remove scientific notation from metric values
+                String metricName = meter.getId().getName().toString()+"."+measurement.getStatistic().toString().toLowerCase().replace("_","");
                 BigDecimal metricValue = BigDecimal.valueOf(measurement.getValue());
                 metricNames.add(metricName);
                 metricValues.add(metricValue);
@@ -102,7 +101,7 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
 
     private void postMetricObject(String json) {
         HttpEntity<String> httpEntity = new HttpEntity<>(json, JSON_HTTP_HEADERS);
-        log.info("Posting :" + httpEntity);
+        //log.info("Posting :" + httpEntity);
         restTemplate.postForObject(config.ambariMonitoringHost, httpEntity, Object.class);
     }
 
