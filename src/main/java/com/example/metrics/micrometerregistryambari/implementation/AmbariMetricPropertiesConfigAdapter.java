@@ -14,4 +14,10 @@ class AmbariMetricPropertiesConfigAdapter extends
     public String metricCollectorUrl() {
         return get(AmbariMetricProperties::getMetricCollectorUrl, AmbariConfig.super::metricCollectorUrl);
     }
+
+    @Override
+    public String[] tagsAsPrefix() {
+        return get(AmbariMetricProperties::getTagsAsPrefix,
+                AmbariConfig.super::tagsAsPrefix);
+    }
 }

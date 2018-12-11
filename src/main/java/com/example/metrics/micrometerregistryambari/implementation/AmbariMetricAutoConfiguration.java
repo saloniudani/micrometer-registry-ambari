@@ -12,7 +12,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 
 @AutoConfigureBefore({CompositeMeterRegistryAutoConfiguration.class,
@@ -31,17 +30,6 @@ public class AmbariMetricAutoConfiguration {
     }
 
     @Bean
-    public AmbariMeterRegistry ambariMeterRegistry(AmbariConfig ambariConfig, AmbariMetricPublisher ambariMetricPublisher) {
-        return new AmbariMeterRegistry(ambariConfig, ambariMetricPublisher);
-    }
-
-    //TODO: Remove when move to spring boot version 2.1.0
-    @Bean
-    MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
-        return registry -> registry.config().commonTags("app", appName);
-    }
-
-    @Bean
     AmbariMetricProperties ambariMetricProperties() {
         return new AmbariMetricProperties();
     }
@@ -55,4 +43,21 @@ public class AmbariMetricAutoConfiguration {
                         ambariMetricProperties.getClientTrustStore(), ambariMetricProperties.getClientTrustStorePassword());
         return new AmbariMetricPublisher(ambariMetricProperties, restTemplate);
     }
+
+    @Bean
+    AmbariMetricHierarchicalNameMapper ambariMetricHierarchicalNameMapper(AmbariConfig ambariConfig) {
+        return new AmbariMetricHierarchicalNameMapper(ambariConfig.tagsAsPrefix());
+    }
+
+    @Bean
+    public AmbariMeterRegistry ambariMeterRegistry(AmbariConfig ambariConfig, AmbariMetricPublisher ambariMetricPublisher, AmbariMetricHierarchicalNameMapper ambariMetricHierarchicalNameMapper) {
+        return new AmbariMeterRegistry(ambariConfig, ambariMetricPublisher, ambariMetricHierarchicalNameMapper);
+    }
+
+    //TODO: Remove when move to spring boot version 2.1.0
+    @Bean
+    MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
+        return registry -> registry.config().commonTags("app", appName);
+    }
+
 }

@@ -24,4 +24,8 @@ public interface AmbariConfig extends StepRegistryConfig {
         }
         return hostName;
     }
+
+    default String[] tagsAsPrefix() {
+        return new String[0];
+    }
 }

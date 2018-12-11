@@ -8,12 +8,12 @@ public class AmbariMetricProperties extends StepRegistryProperties {
 
     private String metricCollectorUrl;
     private String hostname;
-    private boolean skipSslValidation = false;
     private String clientCert;
     private String clientCertPassword;
     private String clientCertKeyPassword;
     private String clientTrustStore;
     private String clientTrustStorePassword;
+    private String[] tagsAsPrefix;
 
     public String getMetricCollectorUrl() {
         return metricCollectorUrl;
@@ -29,14 +29,6 @@ public class AmbariMetricProperties extends StepRegistryProperties {
 
     public void setHostname(String hostname) {
         this.hostname = hostname;
-    }
-
-    public boolean isSkipSslValidation() {
-        return skipSslValidation;
-    }
-
-    public void setSkipSslValidation(boolean skipSslValidation) {
-        this.skipSslValidation = skipSslValidation;
     }
 
     public String getClientCert() {
@@ -77,5 +69,13 @@ public class AmbariMetricProperties extends StepRegistryProperties {
 
     public void setClientTrustStorePassword(String clientTrustStorePassword) {
         this.clientTrustStorePassword = clientTrustStorePassword;
+    }
+
+    public String[] getTagsAsPrefix() {
+        return tagsAsPrefix;
+    }
+
+    public void setTagsAsPrefix(String[] tagsAsPrefix) {
+        this.tagsAsPrefix = tagsAsPrefix;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.metrics.micrometerregistryambari.implementation;
 
 import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.distribution.HistogramSnapshot;
 import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import io.micrometer.core.instrument.step.StepMeterRegistry;
@@ -28,12 +29,13 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
 
     private final AmbariConfig config;
     private final AmbariMetricPublisher ambariMetricPublisher;
+    private final AmbariMetricHierarchicalNameMapper ambariMetricHierarchicalNameMapper;
 
-
-    public AmbariMeterRegistry(AmbariConfig config, AmbariMetricPublisher ambariMetricPublisher) {
+    public AmbariMeterRegistry(AmbariConfig config, AmbariMetricPublisher ambariMetricPublisher, AmbariMetricHierarchicalNameMapper ambariMetricHierarchicalNameMapper) {
         super(config, Clock.SYSTEM);
         this.config = config;
         this.ambariMetricPublisher = ambariMetricPublisher;
+        this.ambariMetricHierarchicalNameMapper = ambariMetricHierarchicalNameMapper;
         start(DEFAULT_THREAD_FACTORY);
     }
 
@@ -122,7 +124,7 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
         Map<String, String> tags = id.getTags().stream()
                 .collect(Collectors.toMap(Tag::getKey, Tag::getValue));
 
-        return new Metric(id.getName(), tags, this.clock.wallTime(), Type.GAUGE, id.getBaseUnit(), BigDecimal.valueOf(value));
+        return new Metric(ambariMetricHierarchicalNameMapper.toHierarchicalName(id, NamingConvention.identity), tags, this.clock.wallTime(), Type.GAUGE, id.getBaseUnit(), BigDecimal.valueOf(value));
     }
 
     private Meter.Id withPercentile(Meter meter, ValueAtPercentile percentile) {
