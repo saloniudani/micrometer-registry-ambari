@@ -1,59 +1,40 @@
 package com.example.metrics.micrometerregistryambari.implementation;
 
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Measurement;
-import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.distribution.HistogramSnapshot;
+import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import io.micrometer.core.instrument.step.StepMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.ArrayList;
+import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.stream.StreamSupport.stream;
 
 @Slf4j
-@Component
 public class AmbariMeterRegistry extends StepMeterRegistry {
 
     private static final ThreadFactory DEFAULT_THREAD_FACTORY = new CustomizableThreadFactory("ambari-metrics-publisher");
+    private static final DecimalFormat PERCENTILE_FORMAT = new DecimalFormat("#.####");
 
     private final AmbariConfig config;
-
-    private static final HttpHeaders JSON_HTTP_HEADERS;
-
-    @Autowired
-    private RestTemplateBuilder restTemplateBuilder;
-
-    private RestTemplate restTemplate;
-
-    static {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        JSON_HTTP_HEADERS = HttpHeaders.readOnlyHttpHeaders(headers);
-    }
+    private final AmbariMetricPublisher ambariMetricPublisher;
 
 
-    public AmbariMeterRegistry(AmbariConfig config) {
+    public AmbariMeterRegistry(AmbariConfig config, AmbariMetricPublisher ambariMetricPublisher) {
         super(config, Clock.SYSTEM);
         this.config = config;
+        this.ambariMetricPublisher = ambariMetricPublisher;
         start(DEFAULT_THREAD_FACTORY);
-    }
-
-    @PostConstruct
-    public void setup() {
-        this.restTemplate = restTemplateBuilder.build();
     }
 
     @Override
@@ -66,77 +47,89 @@ public class AmbariMeterRegistry extends StepMeterRegistry {
 
     @Override
     protected void publish() {
-        final long timestamp = Instant.now().toEpochMilli();
-        List<String> metricNames = new ArrayList<>();
-        List<Number> metricValues = new ArrayList<>();
+        List<Metric> metrics = getMeters().stream()
+                .peek(m -> log.debug(m.getId().toString()))
+                .flatMap(meter -> {
+                    if (meter instanceof DistributionSummary) {
+                        return getMetrics((DistributionSummary) meter);
+                    } else if (meter instanceof FunctionTimer) {
+                        return getMetrics((FunctionTimer) meter);
+                    } else if (meter instanceof Timer) {
+                        return getMetrics((Timer) meter);
+                    } else {
+                        return getMetrics(meter);
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
-        //TODO: form metric key and value objects considering all types of measurements.
-        for (Meter meter : getMeters()) {
-            //log.info("Meter ID :-----"+meter.getId().toString());
-            for (Measurement measurement : meter.measure()) {
-                String metricName = meter.getId().getName()+"."+measurement.getStatistic().toString().toLowerCase().replace("_","");
-                BigDecimal metricValue = BigDecimal.valueOf(measurement.getValue());
-                metricNames.add(metricName);
-                metricValues.add(metricValue);
-                //log.info("Meter value:-------"+measurement.getStatistic().toString() + "=" + measurement.getValue());
-                log.info(metricName + "=" + metricValue);
-            }
-        }
+//        for (Metric metric : metrics) {
+//            log.info(metric.toString());
+//        }
 
-        final String json = createJsonObject(timestamp, metricNames, metricValues);
-        if (json == null) {
-            return; // no data available, try next iteration
-        }
-        try {
-            postMetricObject(json);
-        } catch (Exception e) {
-            log.error("ERROR occured while sending metrics to Ambari", e);
-        }
+        ambariMetricPublisher.publish(metrics);
     }
+
 
     @Override
     protected TimeUnit getBaseTimeUnit() {
         return TimeUnit.SECONDS;
     }
 
-    private void postMetricObject(String json) {
-        HttpEntity<String> httpEntity = new HttpEntity<>(json, JSON_HTTP_HEADERS);
-        //log.info("Posting :" + httpEntity);
-        restTemplate.postForObject(config.ambariMonitoringHost, httpEntity, Object.class);
+    private Stream<Metric> getMetrics(DistributionSummary meter) {
+        return getMetrics(meter, meter.takeSnapshot());
     }
 
-    private String createJsonObject(long currTime, List<String> metricNames, List<Number> metricValues) {
-        final StringBuilder buf = new StringBuilder("{\"metrics\":[\n");
-        boolean first = true;
-        for (int i = 0, j = metricNames.size(); i < j; i++) {
-            final String name = metricNames.get(i);
-            final Number value = metricValues.get(i);
-            if (value != null) {
-                if (!first) {
-                    buf.append(",\n");
-                } else {
-                    first = false;
-                }
-                buf.append("{\"metricname\": \"");
-                if (config.prefix != null) {
-                    buf.append(config.prefix + ".");
-                }
-                buf.append(name);
-                buf.append("\",\"appid\": \"").append(config.appId);
-                buf.append("\",\"hostname\": \"").append(config.hostName);
-                buf.append("\",\"timestamp\": ").append(currTime);
-                buf.append(",\"starttime\": ").append(currTime);
-                buf.append(",\"metrics\": {\"");
-                buf.append(currTime);
-                buf.append("\": ");
-                buf.append(value.toString());
-                buf.append("}}");
-            }
-        }
-        if (first) {
+    private Stream<Metric> getMetrics(FunctionTimer meter) {
+        return Stream.of(
+                toMetric(withStatistic(meter, "count"), meter.count()),
+                toMetric(withStatistic(meter, "mean"), meter.mean(getBaseTimeUnit())),
+                toMetric(withStatistic(meter, "totalTime"), meter.totalTime(getBaseTimeUnit()))
+        );
+    }
+
+    private Stream<Metric> getMetrics(Timer meter) {
+        return getMetrics(meter, meter.takeSnapshot());
+    }
+
+    private Stream<Metric> getMetrics(Meter meter, HistogramSnapshot snapshot) {
+        return Stream.concat(
+                Stream.of(
+                        toMetric(withStatistic(meter, "count"), snapshot.count()),
+                        toMetric(withStatistic(meter, "max"), snapshot.max(getBaseTimeUnit())),
+                        toMetric(withStatistic(meter, "mean"), snapshot.mean(getBaseTimeUnit())),
+                        toMetric(withStatistic(meter, "totalTime"), snapshot.total(getBaseTimeUnit()))
+                ),
+                getMetrics(meter, snapshot.percentileValues())
+        );
+    }
+
+    private Stream<Metric> getMetrics(Meter meter, ValueAtPercentile[] percentiles) {
+        return Arrays.stream(percentiles)
+                .map(percentile -> toMetric(withPercentile(meter, percentile), percentile.value(getBaseTimeUnit())));
+    }
+
+    private Stream<Metric> getMetrics(Meter meter) {
+        return stream(meter.measure().spliterator(), false)
+                .map(measurement -> toMetric(meter.getId().withTag(measurement.getStatistic()), measurement.getValue()));
+    }
+
+    private Metric toMetric(Meter.Id id, double value) {
+        if (Double.isNaN(value)) {
             return null;
         }
-        buf.append("\n]}");
-        return buf.toString();
+
+        Map<String, String> tags = id.getTags().stream()
+                .collect(Collectors.toMap(Tag::getKey, Tag::getValue));
+
+        return new Metric(id.getName(), tags, this.clock.wallTime(), Type.GAUGE, id.getBaseUnit(), BigDecimal.valueOf(value));
+    }
+
+    private Meter.Id withPercentile(Meter meter, ValueAtPercentile percentile) {
+        return withStatistic(meter, String.format("%spercentile", PERCENTILE_FORMAT.format(percentile.percentile() * 100)));
+    }
+
+    private Meter.Id withStatistic(Meter meter, String type) {
+        return meter.getId().withTag(Tag.of("statistic", type));
     }
 }
