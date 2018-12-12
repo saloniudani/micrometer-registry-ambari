@@ -9,6 +9,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -86,7 +87,6 @@ public class AmbariMetricPublisher {
         final StringBuilder buf = new StringBuilder("{\"metrics\":[\n");
         boolean first = true;
         for (Metric metric : metrics) {
-            //TODO: Dimensionality reduction
             final String name = metric.getName();
             final Number value = metric.getValue();
             if (value != null) {
@@ -104,7 +104,7 @@ public class AmbariMetricPublisher {
                 buf.append(",\"metrics\": {\"");
                 buf.append(metric.getTimestamp());
                 buf.append("\": ");
-                buf.append(value.toString());
+                buf.append(((BigDecimal)value).toPlainString());
                 buf.append("}}");
             }
         }

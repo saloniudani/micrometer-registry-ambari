@@ -8,11 +8,13 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class AmbariMetricHierarchicalNameMapper implements HierarchicalNameMapper {
 
     private final List<String> tagsAsPrefix;
+    private static final Pattern blacklistedChars = Pattern.compile("[{}(),=\\[\\]/]");
 
     public AmbariMetricHierarchicalNameMapper(String... tagsAsPrefix) {
         this.tagsAsPrefix = Arrays.asList(tagsAsPrefix);
@@ -43,8 +45,14 @@ public class AmbariMetricHierarchicalNameMapper implements HierarchicalNameMappe
             }
         }
 
-        return hierarchicalName.toString().replace(" ", "_").toLowerCase();
+        return sanitize(hierarchicalName.toString());
 
+    }
+
+    private String sanitize(String delegated) {
+        return blacklistedChars.matcher(delegated).replaceAll("_")
+                .replace(" ", "_")
+                .toLowerCase();
     }
 
 }
