@@ -36,7 +36,7 @@ public class AmbariMetricHierarchicalNameMapper implements HierarchicalNameMappe
         }
         hierarchicalName.append(id.getConventionName(convention));
         for (Tag tag : id.getConventionTags(convention)) {
-            if (!tagsAsPrefix.contains(tag.getKey()) && !"statistic".equalsIgnoreCase(tag.getKey())) {
+            if (!tagsAsPrefix.contains(tag.getKey())) {
                 hierarchicalName
                         .append('.')
                         .append(convention.tagKey(tag.getKey()))
