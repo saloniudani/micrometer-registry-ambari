@@ -19,12 +19,12 @@ public class SampleController {
     @Autowired
     MeterRegistry meterRegistry;
 
-    Counter counter;
-
-    @PostConstruct
-    public void setUp(){
-        counter = meterRegistry.counter("app.requests");
-    }
+//    Counter counter;
+//
+//    @PostConstruct
+//    public void setUp(){
+//        counter = meterRegistry.counter("app.requests");
+//    }
 
     @Timed(value = "app.requests.timer")
     @RequestMapping(value = {
@@ -35,6 +35,7 @@ public class SampleController {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        Counter counter = meterRegistry.counter("app.requests");
         counter.increment();
         return "You hit me "+counter.count()+" times from last reporting interval.";
     }

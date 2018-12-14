@@ -70,7 +70,10 @@ public class SslVerificationHttpRequestFactory {
                 restTemplateBuilder = new RestTemplateBuilder();
             }
             return restTemplateBuilder.interceptors(
-                    (ClientHttpRequestInterceptor) (request, body, execution) -> execution.execute(request, body)).build();
+                    (ClientHttpRequestInterceptor) (request, body, execution) -> execution.execute(request, body))
+                    .setConnectTimeout(10000)
+                    .setReadTimeout(5000)
+                    .build();
         }
     }
 
