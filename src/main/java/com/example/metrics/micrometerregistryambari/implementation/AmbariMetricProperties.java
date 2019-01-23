@@ -3,6 +3,9 @@ package com.example.metrics.micrometerregistryambari.implementation;
 import org.springframework.boot.actuate.autoconfigure.metrics.export.properties.StepRegistryProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 @ConfigurationProperties(prefix = "management.metrics.export.ambari")
 public class AmbariMetricProperties extends StepRegistryProperties {
 
@@ -24,7 +27,20 @@ public class AmbariMetricProperties extends StepRegistryProperties {
     }
 
     public String getHostname() {
-        return hostname;
+        if (this.hostname == null) {
+            String hostName = null;
+            try {
+                hostName = InetAddress.getLocalHost().getHostName();
+                // If not FQDN , call DNS
+                if ((hostName == null) || (!hostName.contains("."))) {
+                    hostName = InetAddress.getLocalHost().getCanonicalHostName();
+                }
+            } catch (UnknownHostException e) {
+                System.out.println("Could not identify hostname." + e);
+            }
+            this.hostname = hostName;
+        }
+        return this.hostname;
     }
 
     public void setHostname(String hostname) {

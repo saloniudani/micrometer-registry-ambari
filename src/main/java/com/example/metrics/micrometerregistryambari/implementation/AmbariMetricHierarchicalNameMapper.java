@@ -50,8 +50,8 @@ public class AmbariMetricHierarchicalNameMapper implements HierarchicalNameMappe
     }
 
     private String sanitize(String delegated) {
-        return blacklistedChars.matcher(delegated).replaceAll("_")
-                .replace(" ", "_")
+        String refinedUri = delegated.replaceAll("\\/\\{.*?\\}","");
+        return blacklistedChars.matcher(refinedUri).replaceAll("_")
                 .toLowerCase();
     }
 

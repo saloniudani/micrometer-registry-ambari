@@ -33,7 +33,7 @@ public class AmbariMetricPublisher {
         JSON_HTTP_HEADERS = HttpHeaders.readOnlyHttpHeaders(headers);
     }
 
-    AmbariMetricPublisher(AmbariMetricProperties properties, RestTemplate restTemplate) {
+    public AmbariMetricPublisher(AmbariMetricProperties properties, RestTemplate restTemplate) {
         this.properties = properties;
         this.restTemplate = restTemplate;
     }
@@ -89,6 +89,7 @@ public class AmbariMetricPublisher {
         for (Metric metric : metrics) {
             final String name = metric.getName();
             final Number value = metric.getValue();
+            //System.out.println("---key---"+name+"---value---"+((BigDecimal)value).toPlainString());
             if (value != null) {
                 if (!first) {
                     buf.append(",\n");
@@ -98,7 +99,7 @@ public class AmbariMetricPublisher {
                 buf.append("{\"metricname\": \"");
                 buf.append(name);
                 buf.append("\",\"appid\": \"").append(metric.getTags().get("app"));
-                buf.append("\",\"hostname\": \"").append(properties.getHostname());
+                buf.append("\",\"hostname\": \"").append(this.properties.getHostname());
                 buf.append("\",\"timestamp\": ").append(metric.getTimestamp());
                 buf.append(",\"starttime\": ").append(metric.getTimestamp());
                 buf.append(",\"metrics\": {\"");
@@ -112,6 +113,7 @@ public class AmbariMetricPublisher {
             return null;
         }
         buf.append("\n]}");
+        log.info(buf.toString());
         return buf.toString();
     }
 
