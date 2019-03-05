@@ -48,7 +48,7 @@
 <!--Test conflict 123-->
 
 
-<!--remove from master -->
+<!--remove from test -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
