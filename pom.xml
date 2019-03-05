@@ -48,7 +48,7 @@
 
 
 
-
+<!--remove from master -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
